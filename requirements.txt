@@ -1,0 +1,26 @@
+# ─── Computer Vision
+ultralytics
+opencv-python
+numpy
+Pillow
+
+# ─── Face Recognition
+deepface
+tf-keras
+
+# ─── FastAPI Backend
+fastapi
+uvicorn[standard]
+python-multipart
+moviepy
+
+# ─── Database
+sqlalchemy
+psycopg2-binary
+python-dotenv
+
+# ─── Streamlit Dashboard
+streamlit
+plotly
+pandas
+requests
