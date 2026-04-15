@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+python-dotenv
+motor
+pymongo
+python-multipart
+requests
+pydantic
+
+numpy
+opencv-python
+deepface
+tensorflow
+torch
+torchvision

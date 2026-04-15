@@ -1,24 +1,28 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from pymongo import MongoClient
 from app.core.config import settings
 
-if not settings.DATABASE_URL:
-    raise ValueError("DATABASE_URL is missing in environment variables.")
+if not settings.MONGO_URL:
+    raise ValueError("MONGO_URL is missing in environment variables.")
 
-# Neon Postgres uses connection pooling, but standard create_engine works well
-engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
+# MongoDB Client Setup
+client = MongoClient(settings.MONGO_URL)
+db = client[settings.DB_NAME]
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Collections
+user_videos_collection = db["user_videos"]
+distraction_alerts_collection = db["distraction_alerts"]
 
-Base = declarative_base()
+# Create indexes for better performance
+user_videos_collection.create_index("user_id", unique=True)
+distraction_alerts_collection.create_index("timestamp")
+distraction_alerts_collection.create_index("employee_user_id")
 
 def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    """MongoDB database dependency for FastAPI"""
+    return db
 
 def init_db():
-    # In real world, use Alembic, but we'll use create_all for simplicity
-    Base.metadata.create_all(bind=engine)
+    """Initialize MongoDB collections and indexes"""
+    print("✅ MongoDB Connected Successfully")
+    print(f"📦 Database: {settings.DB_NAME}")
+    print(f"📊 Collections: user_videos, distraction_alerts")

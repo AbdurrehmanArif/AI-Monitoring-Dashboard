@@ -1,35 +1,52 @@
-from sqlalchemy import Column, Integer, String, LargeBinary, Boolean, Float, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
+from pydantic import BaseModel, Field
 from datetime import datetime
-from app.core.database import Base
+from typing import Optional
+from bson import ObjectId
 
 
-class UserVideo(Base):
-    """Employee ka registration video — face extraction ke liye"""
-    __tablename__ = "user_videos"
+class PyObjectId(ObjectId):
+    """Custom ObjectId type for Pydantic"""
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
 
-    id         = Column(Integer, primary_key=True, index=True)
-    user_id    = Column(String, unique=True, index=True)
-    name       = Column(String, nullable=False)
-    video_data = Column(LargeBinary, nullable=False)  # Video bytes
-    created_at = Column(DateTime, default=datetime.utcnow)
+    @classmethod
+    def validate(cls, v):
+        if not ObjectId.is_valid(v):
+            raise ValueError("Invalid ObjectId")
+        return ObjectId(v)
 
-    # Relationship
-    alerts = relationship("DistractionAlert", back_populates="employee", foreign_keys="DistractionAlert.employee_user_id")
+    @classmethod
+    def __get_pydantic_json_schema__(cls, _schema_generator):
+        return {"type": "string"}
 
 
-class DistractionAlert(Base):
-    """Mobile distraction alert log — PostgreSQL mein persist hota hai"""
-    __tablename__ = "distraction_alerts"
+class UserVideoDocument(BaseModel):
+    """Employee ka registration video — MongoDB document"""
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    user_id: str = Field(..., index=True, unique=True)
+    name: str
+    video_data: bytes  # Video binary data
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    id              = Column(Integer, primary_key=True, index=True)
-    timestamp       = Column(DateTime, default=datetime.utcnow, index=True)
-    duration_sec    = Column(Float, default=0.0)       # Kitni der mobile use hua
-    screenshot_path = Column(String, nullable=True)    # Screenshot file path
-    email_sent      = Column(Boolean, default=False)   # Email gaya ya nahi
-    email_to        = Column(String, nullable=True)    # Kis ko email gaya
-    employee_user_id= Column(String, ForeignKey("user_videos.user_id"), nullable=True)
-    face_recognized = Column(String, nullable=True)    # Recognized face ka naam
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
 
-    # Relationship
-    employee = relationship("UserVideo", back_populates="alerts", foreign_keys=[employee_user_id])
+
+class DistractionAlertDocument(BaseModel):
+    """Mobile distraction alert log — MongoDB document"""
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, index=True)
+    duration_sec: float = 0.0  # Kitni der mobile use hua
+    screenshot_path: Optional[str] = None  # Screenshot file path
+    email_sent: bool = False  # Email gaya ya nahi
+    email_to: Optional[str] = None  # Kis ko email gaya
+    employee_user_id: Optional[str] = Field(None, index=True)  # FK reference
+    face_recognized: Optional[str] = None  # Recognized face ka naam
+
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
